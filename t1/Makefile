@@ -9,6 +9,10 @@ MAQS = ex1.maq ex2.maq ex3.maq ex4.maq ex5.maq init.maq p1.maq p2.maq
 TARGETS = teste montador
 
 all: ${TARGETS}
+
+debug: CFLAGS += -DDEBUG -g
+debug: ${TARGETS}
+
 # para gerar o montador, precisa de todos os .o do montador
 montador: ${OBJS_MONT}
 

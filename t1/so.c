@@ -433,6 +433,7 @@ err_t so_cria_proc(so_t *self, so_proc_t **proc, size_t num_programa) {
     (*proc)->mem = mem;
     (*proc)->cpue = cpue_cria();
     (*proc)->estado = PRONTO;
+    (*proc)->info_bloqueio = NULL;
 
     return ERR_OK;
 }
@@ -440,7 +441,7 @@ err_t so_cria_proc(so_t *self, so_proc_t **proc, size_t num_programa) {
 err_t so_destroi_proc(so_t *self, size_t num_processo) {
     mem_destroi(self->tabela_processos->processos[num_processo]->mem);
     cpue_destroi(self->tabela_processos->processos[num_processo]->cpue);
-    free(self->tabela_processos->processos[num_processo]->info_bloqueio);
+    if (self->tabela_processos->processos[num_processo]->info_bloqueio) free(self->tabela_processos->processos[num_processo]->info_bloqueio);
     free(self->tabela_processos->processos[num_processo]);
     self->tabela_processos->processos[num_processo] = NULL;
     return ERR_OK;
