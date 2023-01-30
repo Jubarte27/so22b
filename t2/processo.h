@@ -20,10 +20,18 @@ typedef enum proc_estado_t proc_estado_t;
 
 typedef struct tabela_processos_t tabela_processos_t;
 typedef struct processo_t processo_t;
+typedef struct metricas_t metricas_t;
 
 struct tabela_processos_t {
     processo_t **processos;
     size_t tam;
+};
+
+struct metricas_t {
+    int clk_ultima_troca_estado;
+    int qtd_trocas_estado;
+    int clk_tempo_total;
+    int clk_tempo_em_execucao;
 };
 
 err_t proc_cria(processo_t **proc, programa_t *programa, int tam_mem);
@@ -35,8 +43,9 @@ bool proc_bloqueado(processo_t *proc);
 bool proc_em_execucao(processo_t *proc);
 tipo_bloqueio_processo proc_tipo_bloqueio(processo_t *proc);
 void *proc_info_bloqueio(processo_t *proc);
-void proc_bloqueia(processo_t *proc, tipo_bloqueio_processo tipo_bloqueio, void *info_bloqueio);
-void proc_altera_estado(processo_t *proc, proc_estado_t estado);
+void proc_bloqueia(processo_t *proc, tipo_bloqueio_processo tipo_bloqueio, void *info_bloqueio, int clock, int delta_clock);
+void proc_altera_estado(processo_t *proc, proc_estado_t estado, int clock, int delta_clock);
+metricas_t *proc_metricas(processo_t *proc);
 
 
 tabela_processos_t *tabela_cria(size_t tam);

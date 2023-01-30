@@ -18,6 +18,8 @@ struct so_t {
     programa_t **programas;    //vetor com os programas
     size_t qtd_programas;   // quantidade de programas no vetor
     escalonador_t *escalonador;
+    int clock;
+    int delta_clock;
 };
 
 struct info_es {
@@ -37,6 +39,9 @@ void incrementa_pc(cpu_estado_t *cpue);
 void muda_modo(so_t *self, cpu_modo_t modo);
 void so_carrega_contexto(so_t *self, processo_t *proc);
 err_t so_cria_proc(so_t *self, processo_t **proc, size_t num_programa);
+void so_proc_altera_estado(so_t *self, processo_t *proc, proc_estado_t estado);
+void so_proc_bloqueia(so_t *self, processo_t *processo, tipo_bloqueio_processo tipo_bloqueio, void *info_bloqueio);
+void so_atualiza_metricas_processos(so_t *self);
 
 so_t *so_cria(contr_t *contr) {
     so_t *self = malloc(sizeof(*self));
@@ -86,7 +91,7 @@ static void so_trata_sisop_le(so_t *self) {
         // altera o estado da CPU (deveria alterar o estado do processo)
         exec_altera_estado(exec, cpue);
     } else {
-        proc_bloqueia(proc, ES, dados_es(proc));
+        so_proc_bloqueia(self, proc, ES, dados_es(proc));
     }
 }
 
@@ -111,7 +116,7 @@ static void so_trata_sisop_escr(so_t *self) {
         // altera o estado da CPU (deveria alterar o estado do processo)
         exec_altera_estado(exec, cpue);
     } else {
-        proc_bloqueia(proc, ES, dados_es(proc));
+        so_proc_bloqueia(self, proc, ES, dados_es(proc));
     }
 }
 
@@ -188,6 +193,7 @@ void so_muda_cpu_erro(so_t *self) {
 // houve uma interrupção do tipo err — trate-a
 void so_int(so_t *self, err_t err) {
     muda_modo(self, supervisor);
+    so_atualiza_metricas_processos(self);
     if (processo_em_execucao(self) != NULL) {
         switch (err) {
             case ERR_SISOP:
@@ -201,10 +207,8 @@ void so_int(so_t *self, err_t err) {
                 self->paniquei = true;
         }
     }
-    int ciclos;
-    es_le(contr_es(self->contr), REL_CICLOS, &ciclos);
     so_alterar_estados_processos_bloqueados(self);
-    processo_t *novo_processo = esc_escalonar(self->escalonador, self->tabela_processos, ciclos);
+    processo_t *novo_processo = esc_escalonar(self->escalonador, self->tabela_processos, self->clock, self->delta_clock);
     so_troca_processo(self, novo_processo);
     so_muda_cpu_erro(self);
     muda_modo(self, usuario);
@@ -296,7 +300,7 @@ void so_primeiro_processo(so_t *self) {
     processo_t *proc;
     so_cria_proc(self, &proc, 0);
     self->num_proc_em_execucao = tabela_adiciona_processo(self->tabela_processos, proc);
-    proc_altera_estado(proc, EM_EXECUCAO);
+    so_proc_altera_estado(self, proc, EM_EXECUCAO);
 }
 
 processo_t *processo_em_execucao(so_t *self) {
@@ -336,7 +340,7 @@ void so_troca_processo(so_t *self, processo_t *proc_novo) {
             muda_modo(self, zumbi);
         } else {
             so_carrega_contexto(self, proc_novo);
-            proc_altera_estado(proc_novo, EM_EXECUCAO);
+            so_proc_altera_estado(self, proc_novo, EM_EXECUCAO);
             self->num_proc_em_execucao = proc_num(self->tabela_processos, proc_novo);
         }
     } else {
@@ -370,11 +374,40 @@ void so_alterar_estados_processos_bloqueados(so_t *self) {
     for (size_t i = 0; i < self->tabela_processos->tam; i++) {
         processo_t *proc = self->tabela_processos->processos[i];
         if (precisa_desbloquar(self, proc)) {
-            proc_altera_estado(proc, PRONTO);
+            so_proc_altera_estado(self, proc, PRONTO);
         }
     }
 }
 
 err_t so_cria_proc(so_t *self, processo_t **proc, size_t num_programa) {
     return proc_cria(proc, self->programas[num_programa], mem_tam(contr_mem(self->contr)));
+}
+
+void so_proc_bloqueia(so_t *self, processo_t *processo, tipo_bloqueio_processo tipo_bloqueio, void *info_bloqueio) {
+    proc_bloqueia(processo, tipo_bloqueio, info_bloqueio, self->clock, self->delta_clock);
+}
+
+void so_proc_altera_estado(so_t *self, processo_t *proc, proc_estado_t estado) {
+    proc_altera_estado(proc, estado, self->clock, self->delta_clock);
+}
+
+void so_atualiza_metricas_processos(so_t *self) {
+    int clock;
+    es_le(contr_es(self->contr), REL_CICLOS, &clock);
+    self->delta_clock = clock - self->clock;
+    self->clock = clock;
+
+    tabela_processos_t *tabela_processos = self->tabela_processos;
+
+    for (size_t i = 0; i < tabela_processos->tam; i++) {
+        processo_t *processo = tabela_processos->processos[i];
+        if (processo == NULL) {
+            continue;
+        }
+        metricas_t *metricas = proc_metricas(processo);
+        metricas->clk_tempo_total += self->delta_clock;
+        if (proc_em_execucao(processo)) {
+            metricas->clk_tempo_em_execucao += self->delta_clock;
+        }
+    }
 }

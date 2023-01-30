@@ -8,6 +8,7 @@ struct processo_t {
     mem_t *mem;           // cópia da memória
     proc_estado_t estado;   // estado do processo
     tipo_bloqueio_processo tipo_bloqueio;
+    metricas_t *metricas;
     void *info_bloqueio;
 };
 
@@ -28,6 +29,11 @@ err_t proc_cria(processo_t **proc, programa_t *programa, int tam_mem) {
     (*proc)->cpue = cpue_cria();
     (*proc)->estado = PRONTO;
     (*proc)->info_bloqueio = NULL;
+    (*proc)->metricas = malloc(sizeof(metricas_t));
+    (*proc)->metricas->clk_tempo_em_execucao = 0;
+    (*proc)->metricas->clk_tempo_total = 0;
+    (*proc)->metricas->clk_ultima_troca_estado = 0;
+    (*proc)->metricas->qtd_trocas_estado = 0;
 
     return ERR_OK;
 }
@@ -68,14 +74,20 @@ mem_t *proc_mem(processo_t *self) {
     return self->mem;
 }
 
-void proc_bloqueia(processo_t *proc, tipo_bloqueio_processo tipo_bloqueio, void *info_bloqueio) {
-    proc->estado = BLOQUEADO;
+metricas_t *proc_metricas(processo_t *proc) {
+    return proc->metricas;
+}
+
+void proc_bloqueia(processo_t *proc, tipo_bloqueio_processo tipo_bloqueio, void *info_bloqueio, int clock, int delta_clock) {
+    proc_altera_estado(proc, BLOQUEADO, clock, delta_clock);
     proc->tipo_bloqueio = tipo_bloqueio;
     proc->info_bloqueio = info_bloqueio;
 }
 
-void proc_altera_estado(processo_t *proc, proc_estado_t estado) {
+void proc_altera_estado(processo_t *proc, proc_estado_t estado, int clock, int delta_clock) {
     proc->estado = estado;
+    proc->metricas->clk_ultima_troca_estado = clock;
+    proc->metricas->qtd_trocas_estado++;
 }
 
 tabela_processos_t *tabela_cria(size_t tam) {

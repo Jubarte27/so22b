@@ -12,9 +12,7 @@ escalonador_t *esc_cria(processo_t *processo_em_execucao) {
     return escalonador;
 }
 
-
-
-processo_t *esc_escalonar(escalonador_t *escalonador, tabela_processos_t *tabela_processos, int qtd_ciclos_atual) {
+processo_t *esc_escalonar(escalonador_t *escalonador, tabela_processos_t *tabela_processos, int clock, int delta_clock) {
     if (escalonador->em_execucao != NULL && proc_em_execucao(escalonador->em_execucao)) {
         return escalonador->em_execucao;
     }
