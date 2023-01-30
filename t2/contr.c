@@ -7,6 +7,7 @@
 #include "so.h"
 #include "tela.h"
 #include "instr.h"
+#include "random.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -20,6 +21,7 @@ struct contr_t {
   rel_t *rel;
   term_t *term;
   es_t *es;
+  random_t *rand;
   so_t *so;
 };
 
@@ -39,10 +41,12 @@ contr_t *contr_cria(void)
   t_inicio();
   // cria o controlador de E/S e registra os dispositivos
   self->es = es_cria();
+  self->rand = rand_cria();
   int i;
   for (i = 0; i <= 6; i++) {
-    es_registra_dispositivo(self->es, i, self->term, 0, term_le, term_escr, term_pronto);
+    es_registra_dispositivo(self->es, i, self->term, i, term_le, term_escr, term_pronto);
   }
+  es_registra_dispositivo(self->es, 10, self->rand, 0, rand_le, NULL, NULL);
   es_registra_dispositivo(self->es, 99, self->rel, 0, rel_le, NULL, NULL);
   es_registra_dispositivo(self->es, 98, self->rel, 1, rel_le, NULL, NULL);
   // cria a unidade de execução e inicializa com a memória e E/S

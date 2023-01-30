@@ -30,4 +30,6 @@ err_t mem_le(mem_t *self, int endereco, int *pvalor);
 // retorna erro ERR_END_INV se endereço inválido
 err_t mem_escreve(mem_t *self, int endereco, int valor);
 
+void dump_mem(mem_t *self, char *nomeArquivo);
+
 #endif // MEM_H

@@ -1,5 +1,8 @@
 #include "mem.h"
 #include <stdlib.h>
+#include <stdio.h>
+
+#define TAM_PAG 10
 
 // tipo de dados opaco para representar uma região de memória
 struct mem_t {
@@ -62,4 +65,18 @@ err_t mem_escreve(mem_t *self, int endereco, int valor)
     self->conteudo[endereco] = valor;
   }
   return err;
+}
+
+
+void dump_mem(mem_t *self, char *nomeArquivo) {
+    FILE *f = fopen(nomeArquivo, "w");
+
+    for (int i = 0; i < self->tam; i++) {
+        if (i % TAM_PAG == 0)
+            fprintf(f, "\n(%8d): ", i / TAM_PAG);
+        int c = self->conteudo[i];
+        fprintf(f, "%16d, ", c);
+    }
+
+    fclose(f);
 }

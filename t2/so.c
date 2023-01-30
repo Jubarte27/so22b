@@ -325,7 +325,10 @@ void so_carrega_contexto(so_t *self, processo_t *proc) {
 void so_troca_processo(so_t *self, processo_t *proc_novo) {
     if (tabela_algum_proc_nao_nulo(self->tabela_processos)) {
         processo_t *proc_atual = processo_em_execucao(self);
-        if (proc_novo != proc_atual && proc_atual != NULL) {
+        if (proc_novo == proc_atual) {
+            return;
+        }
+        if (proc_atual != NULL) {
             so_salvar_contexto(self, proc_atual);
         }
         if (proc_novo == NULL) {
