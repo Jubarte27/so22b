@@ -41,7 +41,7 @@ void so_carrega_contexto(so_t *self, processo_t *proc);
 err_t so_cria_proc(so_t *self, processo_t **proc, size_t num_programa);
 void so_proc_altera_estado(so_t *self, processo_t *proc, proc_estado_t estado);
 void so_proc_bloqueia(so_t *self, processo_t *processo, tipo_bloqueio_processo tipo_bloqueio, void *info_bloqueio);
-void so_atualiza_metricas_processos(so_t *self);
+void so_atualiza_contagem_clock(so_t *self);
 void salva_metrica(processo_t *processo);
 
 so_t *so_cria(contr_t *contr) {
@@ -52,6 +52,7 @@ so_t *so_cria(contr_t *contr) {
     so_carrega_programas(self);
     self->tabela_processos = tabela_cria(self->qtd_programas);
     // inicializa a memória com o programa 0
+    self->clock = 0;
     so_primeiro_processo(self);
     self->escalonador = esc_cria(processo_em_execucao(self));
     so_carrega_contexto(self, processo_em_execucao(self));
@@ -123,6 +124,7 @@ static void so_trata_sisop_escr(so_t *self) {
 // chamada de sistema para término do processo
 static void so_trata_sisop_fim(so_t *self) {
     processo_t *proc = processo_em_execucao(self);
+    proc_fim(proc, self->clock);
     salva_metrica(proc);
     if (proc_info_bloqueio(proc))
         free(proc_info_bloqueio(proc));
@@ -193,7 +195,7 @@ void so_muda_cpu_erro(so_t *self) {
 // houve uma interrupção do tipo err — trate-a
 void so_int(so_t *self, err_t err) {
     muda_modo(self, supervisor);
-    so_atualiza_metricas_processos(self);
+    so_atualiza_contagem_clock(self);
     if (processo_em_execucao(self) != NULL) {
         switch (err) {
             case ERR_SISOP:
@@ -380,7 +382,7 @@ void so_alterar_estados_processos_bloqueados(so_t *self) {
 }
 
 err_t so_cria_proc(so_t *self, processo_t **proc, size_t num_programa) {
-    return proc_cria(proc, self->programas[num_programa], mem_tam(contr_mem(self->contr)));
+    return proc_cria(proc, self->programas[num_programa], mem_tam(contr_mem(self->contr)), self->clock);
 }
 
 void so_proc_bloqueia(so_t *self, processo_t *processo, tipo_bloqueio_processo tipo_bloqueio, void *info_bloqueio) {
@@ -391,29 +393,15 @@ void so_proc_altera_estado(so_t *self, processo_t *proc, proc_estado_t estado) {
     proc_altera_estado(proc, estado, self->clock, self->delta_clock);
 }
 
-void so_atualiza_metricas_processos(so_t *self) {
+void so_atualiza_contagem_clock(so_t *self) {
     int clock;
     es_le(contr_es(self->contr), REL_CICLOS, &clock);
     self->delta_clock = clock - self->clock;
     self->clock = clock;
-
-    tabela_processos_t *tabela_processos = self->tabela_processos;
-
-    for (size_t i = 0; i < tabela_processos->tam; i++) {
-        processo_t *processo = tabela_processos->processos[i];
-        if (processo == NULL) {
-            continue;
-        }
-        metricas_t *metricas = proc_metricas(processo);
-        metricas->clk_tempo_total += self->delta_clock;
-        if (proc_em_execucao(processo)) {
-            metricas->clk_tempo_em_execucao += self->delta_clock;
-        }
-    }
 }
 
 void salva_metrica(processo_t *processo) {
     metricas_t *metricas = proc_metricas(processo);
-    t_printf("(%u) total: %d, exec: %d, trocas: %d, ultima_troca: %d", processo, metricas->clk_tempo_total,
-             metricas->clk_tempo_em_execucao, metricas->qtd_trocas_estado, metricas->clk_ultima_troca_estado);
+    t_printf("(%u) e: %d, b: %d, qtd_b: %d, p: %d, qtd_p: %d, total: %d", processo,
+             metricas->clk_total_E, metricas->clk_total_B, metricas->qtd_bloqueios, metricas->clk_total_P, metricas->qtd_preempcoes, metricas->clk_fim - metricas->clk_inicio);
 }

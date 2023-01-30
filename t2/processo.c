@@ -12,7 +12,7 @@ struct processo_t {
     void *info_bloqueio;
 };
 
-err_t proc_cria(processo_t **proc, programa_t *programa, int tam_mem) {
+err_t proc_cria(processo_t **proc, programa_t *programa, int tam_mem, int clock) {
     mem_t *mem = mem_cria(tam_mem);
     *proc = malloc(sizeof(processo_t));
     for (int i = 0; i < programa->tam; i++) {
@@ -29,11 +29,16 @@ err_t proc_cria(processo_t **proc, programa_t *programa, int tam_mem) {
     (*proc)->cpue = cpue_cria();
     (*proc)->estado = PRONTO;
     (*proc)->info_bloqueio = NULL;
-    (*proc)->metricas = malloc(sizeof(metricas_t));
-    (*proc)->metricas->clk_tempo_em_execucao = 0;
-    (*proc)->metricas->clk_tempo_total = 0;
-    (*proc)->metricas->clk_ultima_troca_estado = 0;
-    (*proc)->metricas->qtd_trocas_estado = 0;
+    metricas_t *metricas = malloc(sizeof(metricas_t));
+    metricas->clk_inicio = clock;
+    metricas->clk_ultima_troca_estado = clock;
+    metricas->clk_total_E = 0;
+    metricas->clk_total_B = 0;
+    metricas->clk_total_P = 0;
+    metricas->qtd_bloqueios = 0;
+    metricas->qtd_preempcoes = 0;
+
+    (*proc)->metricas = metricas;
 
     return ERR_OK;
 }
@@ -84,10 +89,36 @@ void proc_bloqueia(processo_t *proc, tipo_bloqueio_processo tipo_bloqueio, void 
     proc->info_bloqueio = info_bloqueio;
 }
 
+void atualiza_clock_ultimo_estado(processo_t *proc, int clock) {
+    metricas_t *metricas = proc->metricas;
+    int *clk_ultimo_estado;
+
+    switch (proc->estado) {
+        case EM_EXECUCAO:
+            clk_ultimo_estado = &metricas->clk_total_E;
+            break;
+        case BLOQUEADO:
+            clk_ultimo_estado = &metricas->clk_total_B;
+            break;
+        case PRONTO:
+            clk_ultimo_estado = &metricas->clk_total_P;
+            break;
+    }
+    *clk_ultimo_estado += clock - metricas->clk_ultima_troca_estado;
+    metricas->clk_ultima_troca_estado = clock;
+}
+
 void proc_altera_estado(processo_t *proc, proc_estado_t estado, int clock, int delta_clock) {
+    metricas_t *metricas = proc->metricas;
+    atualiza_clock_ultimo_estado(proc, clock);
+    if (proc->estado == EM_EXECUCAO) {
+        if (estado == BLOQUEADO) {
+            metricas->qtd_bloqueios++;
+        } else if (estado == PRONTO) {
+            metricas->qtd_preempcoes++;
+        }
+    }
     proc->estado = estado;
-    proc->metricas->clk_ultima_troca_estado = clock;
-    proc->metricas->qtd_trocas_estado++;
 }
 
 tabela_processos_t *tabela_cria(size_t tam) {
@@ -126,4 +157,9 @@ size_t tabela_adiciona_processo(tabela_processos_t *tabela, processo_t *processo
     size_t pos_processo = vetor_adiciona_primeira_posicao(&vetor, processo);
     vetor_atualiza_processos(tabela, &vetor);
     return pos_processo;
+}
+
+void proc_fim(processo_t *processo, int clock) {
+    atualiza_clock_ultimo_estado(processo, clock);
+    processo->metricas->clk_fim = clock;
 }
