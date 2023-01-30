@@ -5,6 +5,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define REL_CICLOS 99
+#define REL_TEMPO_TOTAL 98
+
 typedef struct info_es info_es;
 
 struct so_t {
@@ -14,6 +17,7 @@ struct so_t {
     size_t num_proc_em_execucao;
     programa_t **programas;    //vetor com os programas
     size_t qtd_programas;   // quantidade de programas no vetor
+    escalonador_t *escalonador;
 };
 
 struct info_es {
@@ -43,6 +47,7 @@ so_t *so_cria(contr_t *contr) {
     self->tabela_processos = tabela_cria(self->qtd_programas);
     // inicializa a memória com o programa 0
     so_primeiro_processo(self);
+    self->escalonador = esc_cria(processo_em_execucao(self));
     so_carrega_contexto(self, processo_em_execucao(self));
     // coloca a CPU em modo usuário
     muda_modo(self, usuario);
@@ -116,6 +121,7 @@ static void so_trata_sisop_fim(so_t *self) {
     if (proc_info_bloqueio(proc))
         free(proc_info_bloqueio(proc));
     proc_destroi(proc);
+    esc_remover_processo_execucao(self->escalonador);
     self->tabela_processos->processos[self->num_proc_em_execucao] = NULL;
     self->num_proc_em_execucao = self->tabela_processos->tam;
 }
@@ -195,10 +201,11 @@ void so_int(so_t *self, err_t err) {
                 self->paniquei = true;
         }
     }
+    int ciclos;
+    es_le(contr_es(self->contr), REL_CICLOS, &ciclos);
     so_alterar_estados_processos_bloqueados(self);
-    if (precisa_escalonar(self->tabela_processos, self->num_proc_em_execucao) && !self->paniquei) {
-        so_troca_processo(self, escalonar(self->tabela_processos));
-    }
+    processo_t *novo_processo = esc_escalonar(self->escalonador, self->tabela_processos, ciclos);
+    so_troca_processo(self, novo_processo);
     so_muda_cpu_erro(self);
     muda_modo(self, usuario);
 }
@@ -239,7 +246,7 @@ programa_t *programa_cria(int *codigo, size_t tam) {
 }
 
 void so_carrega_programas(so_t *self) {
-    self->qtd_programas = 4;
+    self->qtd_programas = 5;
     self->programas = malloc(sizeof(programa_t) * self->qtd_programas);
     size_t i = 0;
 

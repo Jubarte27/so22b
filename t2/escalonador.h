@@ -6,7 +6,11 @@
 #include "processo.h"
 #include "so.h"
 
-bool precisa_escalonar(tabela_processos_t *tabela_processos, size_t num_proc_execucao);
-processo_t *escalonar(tabela_processos_t *tabela_processos);
+typedef struct escalonador_t escalonador_t;
+
+
+escalonador_t *esc_cria(processo_t *processo_em_execucao);
+processo_t *esc_escalonar(escalonador_t *escalonador, tabela_processos_t *tabela_processos, int qtd_ciclos_atual);
+void esc_remover_processo_execucao(escalonador_t *escalonador);
 
 #endif //SO22B_ESCALONADOR_H
