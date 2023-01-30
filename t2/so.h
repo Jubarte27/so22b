@@ -8,7 +8,9 @@
 //
 // Por enquanto não faz quase nada
 
+#include <stdlib.h>
 
+typedef struct programa_t programa_t;
 typedef struct so_t so_t;
 
 // as chamadas de sistema
@@ -18,6 +20,11 @@ typedef enum {
   SO_FIM,          // encerra a execução do processo
   SO_CRIA,         // cria um novo processo, para executar o programa A
 } so_chamada_t;
+
+struct programa_t {
+    int *codigo;
+    size_t tam;
+};
 
 #include "contr.h"
 #include "err.h"

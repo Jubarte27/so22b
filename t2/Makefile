@@ -3,7 +3,7 @@ CFLAGS = -Wall -Werror
 LDLIBS = -lcurses
 
 OBJS = exec.o cpu_estado.o es.o mem.o rel.o term.o instr.o err.o \
-			 tela.o contr.o so.o teste.o
+			 tela.o contr.o so.o teste.o processo.o vetor.o escalonador.o
 OBJS_MONT = instr.o err.o montador.o
 MAQS = init.maq peq_cpu.maq peq_es.maq grande_cpu.maq grande_es.maq
 TARGETS = teste montador
