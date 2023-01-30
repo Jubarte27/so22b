@@ -3,13 +3,18 @@ CFLAGS = -Wall -Werror
 LDLIBS = -lcurses
 
 OBJS = exec.o cpu_estado.o es.o mem.o rel.o term.o instr.o err.o \
-			 tela.o contr.o so.o mmu.o tab_pag.o teste.o
+			 tela.o contr.o so.o mmu.o tab_pag.o teste.o teste.o processo.o vetor.o random.o \
+			 escalonador_curto.o
 OBJS_MONT = instr.o err.o montador.o
-MAQS = ex1.maq ex2.maq ex3.maq ex4.maq ex5.maq init.maq p1.maq p2.maq a1.maq \
+MAQS = init.maq a1.maq \
 			 peq_cpu.maq peq_es.maq grande_cpu.maq grande_es.maq
 TARGETS = teste montador
 
 all: ${TARGETS}
+
+debug: CFLAGS += -DDEBUG -g
+debug: ${TARGETS}
+
 # para gerar o montador, precisa de todos os .o do montador
 montador: ${OBJS_MONT}
 
