@@ -42,6 +42,7 @@ err_t so_cria_proc(so_t *self, processo_t **proc, size_t num_programa);
 void so_proc_altera_estado(so_t *self, processo_t *proc, proc_estado_t estado);
 void so_proc_bloqueia(so_t *self, processo_t *processo, tipo_bloqueio_processo tipo_bloqueio, void *info_bloqueio);
 void so_atualiza_metricas_processos(so_t *self);
+void salva_metrica(processo_t *processo);
 
 so_t *so_cria(contr_t *contr) {
     so_t *self = malloc(sizeof(*self));
@@ -59,10 +60,9 @@ so_t *so_cria(contr_t *contr) {
     return self;
 }
 
-void so_destroi(so_t *self)
-{
+void so_destroi(so_t *self) {
     /*Matar os processos*/
-  free(self);
+    free(self);
 }
 
 // trata chamadas de sistema
@@ -123,6 +123,7 @@ static void so_trata_sisop_escr(so_t *self) {
 // chamada de sistema para término do processo
 static void so_trata_sisop_fim(so_t *self) {
     processo_t *proc = processo_em_execucao(self);
+    salva_metrica(proc);
     if (proc_info_bloqueio(proc))
         free(proc_info_bloqueio(proc));
     proc_destroi(proc);
@@ -174,9 +175,8 @@ static void so_trata_sisop(so_t *self) {
 }
 
 // trata uma interrupção de tempo do relógio
-static void so_trata_tic(so_t *self)
-{
-  // TODO: tratar a interrupção do relógio
+static void so_trata_tic(so_t *self) {
+    // TODO: tratar a interrupção do relógio
 }
 
 void so_muda_cpu_erro(so_t *self) {
@@ -410,4 +410,10 @@ void so_atualiza_metricas_processos(so_t *self) {
             metricas->clk_tempo_em_execucao += self->delta_clock;
         }
     }
+}
+
+void salva_metrica(processo_t *processo) {
+    metricas_t *metricas = proc_metricas(processo);
+    t_printf("(%u) total: %d, exec: %d, trocas: %d, ultima_troca: %d", processo, metricas->clk_tempo_total,
+             metricas->clk_tempo_em_execucao, metricas->qtd_trocas_estado, metricas->clk_ultima_troca_estado);
 }
