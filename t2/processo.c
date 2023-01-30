@@ -9,10 +9,11 @@ struct processo_t {
     proc_estado_t estado;   // estado do processo
     tipo_bloqueio_processo tipo_bloqueio;
     metricas_t *metricas;
+    int num_programa;
     void *info_bloqueio;
 };
 
-err_t proc_cria(processo_t **proc, programa_t *programa, int tam_mem, int clock) {
+err_t proc_cria(processo_t **proc, programa_t *programa, int num_programa, int tam_mem, int clock) {
     mem_t *mem = mem_cria(tam_mem);
     *proc = malloc(sizeof(processo_t));
     for (int i = 0; i < programa->tam; i++) {
@@ -29,6 +30,7 @@ err_t proc_cria(processo_t **proc, programa_t *programa, int tam_mem, int clock)
     (*proc)->cpue = cpue_cria();
     (*proc)->estado = PRONTO;
     (*proc)->info_bloqueio = NULL;
+    (*proc)->num_programa = num_programa;
     metricas_t *metricas = malloc(sizeof(metricas_t));
     metricas->clk_inicio = clock;
     metricas->clk_ultima_troca_estado = clock;
@@ -109,6 +111,7 @@ void atualiza_clock_ultimo_estado(processo_t *proc, int clock) {
 }
 
 void proc_altera_estado(processo_t *proc, proc_estado_t estado, int clock, int delta_clock) {
+    if (estado == proc->estado) return;
     metricas_t *metricas = proc->metricas;
     atualiza_clock_ultimo_estado(proc, clock);
     if (proc->estado == EM_EXECUCAO) {
@@ -162,4 +165,8 @@ size_t tabela_adiciona_processo(tabela_processos_t *tabela, processo_t *processo
 void proc_fim(processo_t *processo, int clock) {
     atualiza_clock_ultimo_estado(processo, clock);
     processo->metricas->clk_fim = clock;
+}
+
+int proc_num_programa(processo_t *processo) {
+    return processo->num_programa;
 }

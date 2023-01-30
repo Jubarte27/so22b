@@ -20,6 +20,9 @@ struct so_t {
     escalonador_t *escalonador;
     int clock;
     int delta_clock;
+
+    int total_interrupcoes;
+    int clk_cpu_parada;
 };
 
 struct info_es {
@@ -49,6 +52,7 @@ so_t *so_cria(contr_t *contr) {
     if (self == NULL) return NULL;
     self->contr = contr;
     self->paniquei = false;
+    self->total_interrupcoes = 0;
     so_carrega_programas(self);
     self->tabela_processos = tabela_cria(self->qtd_programas);
     // inicializa a memória com o programa 0
@@ -178,7 +182,7 @@ static void so_trata_sisop(so_t *self) {
 
 // trata uma interrupção de tempo do relógio
 static void so_trata_tic(so_t *self) {
-    // TODO: tratar a interrupção do relógio
+    //
 }
 
 void so_muda_cpu_erro(so_t *self) {
@@ -194,6 +198,7 @@ void so_muda_cpu_erro(so_t *self) {
 
 // houve uma interrupção do tipo err — trate-a
 void so_int(so_t *self, err_t err) {
+    self->total_interrupcoes++;
     muda_modo(self, supervisor);
     so_atualiza_contagem_clock(self);
     if (processo_em_execucao(self) != NULL) {
@@ -208,6 +213,8 @@ void so_int(so_t *self, err_t err) {
                 t_printf("SO: interrupção não tratada [%s]", err_nome(err));
                 self->paniquei = true;
         }
+    } else {
+        self->clk_cpu_parada += self->delta_clock;
     }
     so_alterar_estados_processos_bloqueados(self);
     processo_t *novo_processo = esc_escalonar(self->escalonador, self->tabela_processos, self->clock, self->delta_clock);
@@ -218,6 +225,9 @@ void so_int(so_t *self, err_t err) {
 
 // retorna false se o sistema deve ser desligado
 bool so_ok(so_t *self) {
+    if (self->paniquei) {
+        t_printf("(so) total: %d, total_cpu: %d, qtd_interrupcoes: %d", self->clock, self->clock - self->clk_cpu_parada, self->total_interrupcoes);
+    }
     return !self->paniquei;
 }
 
@@ -331,9 +341,6 @@ void so_carrega_contexto(so_t *self, processo_t *proc) {
 void so_troca_processo(so_t *self, processo_t *proc_novo) {
     if (tabela_algum_proc_nao_nulo(self->tabela_processos)) {
         processo_t *proc_atual = processo_em_execucao(self);
-        if (proc_novo == proc_atual) {
-            return;
-        }
         if (proc_atual != NULL) {
             so_salvar_contexto(self, proc_atual);
         }
@@ -382,7 +389,7 @@ void so_alterar_estados_processos_bloqueados(so_t *self) {
 }
 
 err_t so_cria_proc(so_t *self, processo_t **proc, size_t num_programa) {
-    return proc_cria(proc, self->programas[num_programa], mem_tam(contr_mem(self->contr)), self->clock);
+    return proc_cria(proc, self->programas[num_programa], num_programa, mem_tam(contr_mem(self->contr)), self->clock);
 }
 
 void so_proc_bloqueia(so_t *self, processo_t *processo, tipo_bloqueio_processo tipo_bloqueio, void *info_bloqueio) {
@@ -402,6 +409,6 @@ void so_atualiza_contagem_clock(so_t *self) {
 
 void salva_metrica(processo_t *processo) {
     metricas_t *metricas = proc_metricas(processo);
-    t_printf("(%u) e: %d, b: %d, qtd_b: %d, p: %d, qtd_p: %d, total: %d", processo,
+    t_printf("(%d) e: %d, b: %d, qtd_b: %d, p: %d, qtd_p: %d, total: %d", proc_num_programa(processo),
              metricas->clk_total_E, metricas->clk_total_B, metricas->qtd_bloqueios, metricas->clk_total_P, metricas->qtd_preempcoes, metricas->clk_fim - metricas->clk_inicio);
 }

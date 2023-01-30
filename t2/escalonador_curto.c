@@ -1,4 +1,5 @@
 #include "escalonador.h"
+#include "tela.h"
 
 struct escalonador_t {
     processo_t *em_execucao;
@@ -29,7 +30,7 @@ processo_t *esc_escalonar(escalonador_t *escalonador, tabela_processos_t *tabela
     size_t tam = tabela_processos->tam;
 
     processo_t *mais_curto_pronto = NULL;
-    int clk_mais_curto = QUANTUM;
+    int clk_mais_curto;
     for (size_t i = 0; i < tam; i++) {
         processo_t *proc = processos[i];
         if (proc == NULL || !proc_pronto(proc)) continue;

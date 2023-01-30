@@ -6,7 +6,7 @@
 #include "processo.h"
 #include "so.h"
 
-#define QUANTUM 5
+#define QUANTUM 20
 
 typedef struct escalonador_t escalonador_t;
 

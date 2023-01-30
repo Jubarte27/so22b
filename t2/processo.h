@@ -39,7 +39,7 @@ struct metricas_t {
     int qtd_preempcoes;
 };
 
-err_t proc_cria(processo_t **proc, programa_t *programa, int tam_mem, int clock);
+err_t proc_cria(processo_t **proc, programa_t *programa, int num_programa, int tam_mem, int clock);
 err_t proc_destroi(processo_t *processo);
 cpu_estado_t *proc_cpue(processo_t *self);
 mem_t *proc_mem(processo_t *self);
@@ -52,7 +52,7 @@ void proc_bloqueia(processo_t *proc, tipo_bloqueio_processo tipo_bloqueio, void 
 void proc_altera_estado(processo_t *proc, proc_estado_t estado, int clock, int delta_clock);
 metricas_t *proc_metricas(processo_t *proc);
 void proc_fim(processo_t *processo, int clock);
-
+int proc_num_programa(processo_t *processo);
 
 tabela_processos_t *tabela_cria(size_t tam);
 size_t tabela_adiciona_processo(tabela_processos_t *tabela, processo_t *processo);
