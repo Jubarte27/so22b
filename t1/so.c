@@ -278,19 +278,15 @@ void so_carrega_programas(so_t *self) {
     #define PROGRAMAS self->programas
     #define I i
 
-    #define MAQ "init.maq"
     #define VAR init
     #include "carrega_programa.h"
 
-    #define MAQ "p1.maq"
     #define VAR p1
     #include "carrega_programa.h"
 
-    #define MAQ "p2.maq"
     #define VAR p2
     #include "carrega_programa.h"
 
-    #define MAQ "ex1.maq"
     #define VAR ex1
     #include "carrega_programa.h"
 

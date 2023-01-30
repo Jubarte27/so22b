@@ -4,11 +4,16 @@
 
 #define prog(codigo) (programa_cria(codigo, len(codigo)))
 
+#define STRINGIFY(X) STRINGIFY2(X)
+#define STRINGIFY2(X) #X
+
+#define ARQUIVO_MAQ(NOME) STRINGIFY(NOME.maq)
+
 #endif
 
-#if defined(MAQ) && defined(VAR)
+#if defined(VAR)
     int VAR[] = {
-        #include MAQ
+        #include ARQUIVO_MAQ(VAR)
     };
     #if defined(PROGRAMAS) && defined(I)
         (PROGRAMAS)[I++] = prog(VAR);
